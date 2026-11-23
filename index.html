@@ -1,0 +1,151 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#171326">
+  <meta name="description" content="Sistema de administración de El Imperio de la Moda">
+  <title>El Imperio de la Moda</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/src/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#">
+        <span class="crown">♛</span>
+        <span>
+          <strong>EL IMPERIO</strong>
+          <small>DE LA MODA</small>
+        </span>
+      </a>
+
+      <div class="side-label">MENÚ PRINCIPAL</div>
+
+      <nav class="nav">
+        <button class="nav-item active" data-view="inicio"><span>⌂</span> Inicio</button>
+        <button class="nav-item" data-view="personal"><span>♙</span> Personal y permisos</button>
+        <button class="nav-item" data-view="clientes"><span>♧</span> Clientes</button>
+        <button class="nav-item" data-view="productos"><span>◇</span> Productos</button>
+        <button class="nav-item" data-view="inventario"><span>▤</span> Inventario</button>
+        <button class="nav-item" data-view="ventas"><span>＄</span> Ventas</button>
+        <button class="nav-item" data-view="consignaciones"><span>▣</span> Consignaciones</button>
+        <button class="nav-item" data-view="cobros"><span>◉</span> Cobros</button>
+        <button class="nav-item" data-view="zonas"><span>⌖</span> Zonas y mapa</button>
+        <button class="nav-item" data-view="reportes"><span>▥</span> Reportes</button>
+        <button class="nav-item" data-view="auditoria"><span>◷</span> Historial y auditoría</button>
+      </nav>
+
+      <div class="sidebar-foot">
+        <span class="status-dot"></span> Proyecto en preparación
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="menu-btn" id="menuBtn" aria-label="Abrir menú">☰</button>
+        <div>
+          <div class="eyebrow">EL IMPERIO DE LA MODA</div>
+          <div class="top-title" id="pageTitle">Resumen general</div>
+        </div>
+        <div class="top-actions">
+          <span class="demo-pill">VERSIÓN INICIAL</span>
+          <div class="avatar">IM</div>
+        </div>
+      </header>
+
+      <div class="content">
+        <section class="welcome">
+          <div>
+            <div class="eyebrow light">PANEL DE ADMINISTRACIÓN</div>
+            <h1>Bienvenido a tu imperio</h1>
+            <p>Organiza tu negocio, controla tus operaciones y mantén todo bajo control.</p>
+          </div>
+          <div class="welcome-mark">♛</div>
+        </section>
+
+        <div class="notice">
+          <strong>Proyecto en construcción.</strong>
+          <span>Esta es una versión visual inicial. Los módulos se desarrollarán por etapas.</span>
+        </div>
+
+        <section>
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">VISTA GENERAL</div>
+              <h2>Resumen del negocio</h2>
+            </div>
+            <span class="date-chip" id="today">Fecha actual</span>
+          </div>
+
+          <div class="stats-grid">
+            <article class="stat-card">
+              <div class="stat-icon purple">♙</div>
+              <span class="stat-label">Clientes registrados</span>
+              <strong>0</strong>
+              <small>Directorio de clientes</small>
+            </article>
+            <article class="stat-card">
+              <div class="stat-icon pink">◇</div>
+              <span class="stat-label">Productos</span>
+              <strong>0</strong>
+              <small>Catálogo de productos</small>
+            </article>
+            <article class="stat-card">
+              <div class="stat-icon gold">＄</div>
+              <span class="stat-label">Ventas registradas</span>
+              <strong>0</strong>
+              <small>Control de ventas</small>
+            </article>
+            <article class="stat-card">
+              <div class="stat-icon green">◉</div>
+              <span class="stat-label">Cobros registrados</span>
+              <strong>0</strong>
+              <small>Control de pagos</small>
+            </article>
+          </div>
+        </section>
+
+        <div class="dashboard-grid">
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <div class="eyebrow">GESTIÓN</div>
+                <h3>Módulos del sistema</h3>
+              </div>
+              <span class="tag">11 módulos</span>
+            </div>
+
+            <div class="module-grid">
+              <div class="module"><b>♙</b><span>Personal</span><small>Trabajadores y permisos</small></div>
+              <div class="module"><b>♧</b><span>Clientes</span><small>Registro y seguimiento</small></div>
+              <div class="module"><b>◇</b><span>Productos</span><small>Catálogo y precios</small></div>
+              <div class="module"><b>▤</b><span>Inventario</span><small>Entradas y salidas</small></div>
+              <div class="module"><b>＄</b><span>Ventas</span><small>Registro de operaciones</small></div>
+              <div class="module"><b>◉</b><span>Cobros</span><small>Pagos y referencias</small></div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="eyebrow">PLAN DE DESARROLLO</div>
+            <h3>Preparación del sistema</h3>
+            <ul class="steps">
+              <li class="done"><span>✓</span><div><b>Estructura del proyecto</b><small>Archivos iniciales creados</small></div></li>
+              <li class="done"><span>✓</span><div><b>Diseño visual inicial</b><small>Panel adaptable a móviles</small></div></li>
+              <li><span>3</span><div><b>Base de datos</b><small>Clientes, ventas y cobros</small></div></li>
+              <li><span>4</span><div><b>Usuarios y permisos</b><small>Accesos de administrador y personal</small></div></li>
+              <li><span>5</span><div><b>Sincronización</b><small>Trabajo desde varios dispositivos</small></div></li>
+            </ul>
+          </section>
+        </div>
+
+        <footer>EL IMPERIO DE LA MODA · Sistema de administración</footer>
+      </div>
+    </main>
+  </div>
+
+  <script src="/src/app.js"></script>
+</body>
+</html>
