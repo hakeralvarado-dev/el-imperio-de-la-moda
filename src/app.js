@@ -1,7 +1,7 @@
 
 /* =====================================================
    EL IMPERIO DE LA MODA
-   Primera versión funcional de administración
+   Administración con formularios relacionados
    Almacenamiento local del navegador
 ===================================================== */
 
@@ -121,173 +121,137 @@ const modulos = {
 let baseDatos = cargarDatos();
 let auditoria = cargarAuditoria();
 let moduloActual = "inicio";
-let registroEditando = null;
 
-/* ESTILOS COMPLEMENTARIOS */
+/* ESTILOS */
 
 const estilos = document.createElement("style");
 
 estilos.textContent = `
-.modulo-header {
-  margin-bottom: 22px;
-}
-
-.modulo-header h2 {
-  margin: 7px 0;
-  font-size: 23px;
-}
-
-.modulo-header p {
-  color: #817b8d;
-  font-size: 13px;
-}
+.modulo-header { margin-bottom:22px; }
+.modulo-header h2 { margin:7px 0; font-size:23px; }
+.modulo-header p { color:#817b8d; font-size:13px; }
 
 .modulo-layout {
-  display: grid;
-  grid-template-columns: minmax(260px, .8fr) minmax(0, 1.5fr);
-  gap: 18px;
-  align-items: start;
+  display:grid;
+  grid-template-columns:minmax(260px,.8fr) minmax(0,1.5fr);
+  gap:18px;
+  align-items:start;
 }
 
 .modulo-card {
-  background: white;
-  border: 1px solid #ece9f1;
-  border-radius: 13px;
-  padding: 20px;
-  min-width: 0;
+  background:white;
+  border:1px solid #ece9f1;
+  border-radius:13px;
+  padding:20px;
+  min-width:0;
 }
 
-.modulo-card h3 {
-  margin-top: 0;
-  font-size: 16px;
-}
+.modulo-card h3 { margin-top:0; font-size:16px; }
 
-.modulo-form {
-  display: grid;
-  gap: 13px;
-}
+.modulo-form { display:grid; gap:13px; }
 
 .modulo-form label {
-  display: grid;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #51485f;
+  display:grid;
+  gap:6px;
+  font-size:12px;
+  font-weight:600;
+  color:#51485f;
+}
+
+.modulo-form input,
+.modulo-form select,
+.modulo-form textarea,
+.modulo-busqueda {
+  width:100%;
+  box-sizing:border-box;
+  padding:11px;
+  border:1px solid #ded9e7;
+  border-radius:8px;
+  background:white;
+  color:#211b31;
+  font:inherit;
+}
+
+.modulo-form textarea {
+  min-height:75px;
+  resize:vertical;
 }
 
 .modulo-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 5px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:5px;
 }
 
 .btn-principal,
 .btn-secundario,
 .btn-peligro,
 .btn-pequeno {
-  border: 0;
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-size: 12px;
-  font-weight: 700;
+  border:0;
+  border-radius:8px;
+  padding:10px 14px;
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
 }
 
-.btn-principal {
-  background: #6d4bc3;
-  color: white;
-}
-
-.btn-secundario {
-  background: #f0ecf6;
-  color: #684bb0;
-}
-
-.btn-peligro {
-  background: #fff0f1;
-  color: #c34455;
-}
-
-.btn-pequeno {
-  background: #f0ecf6;
-  color: #684bb0;
-  padding: 7px 10px;
-}
+.btn-principal { background:#6d4bc3; color:white; }
+.btn-secundario { background:#f0ecf6; color:#684bb0; }
+.btn-peligro { background:#fff0f1; color:#c34455; }
+.btn-pequeno { background:#f0ecf6; color:#684bb0; padding:7px 10px; }
 
 .modulo-lista {
-  display: grid;
-  gap: 10px;
-  margin-top: 15px;
+  display:grid;
+  gap:10px;
+  margin-top:15px;
 }
 
 .registro-card {
-  border: 1px solid #ece9f1;
-  border-radius: 10px;
-  padding: 14px;
-  overflow-wrap: anywhere;
+  border:1px solid #ece9f1;
+  border-radius:10px;
+  padding:14px;
+  overflow-wrap:anywhere;
 }
 
-.registro-card h4 {
-  margin: 0 0 9px;
-  font-size: 14px;
-}
-
-.registro-card p {
-  margin: 5px 0;
-  color: #817b8d;
-  font-size: 12px;
-}
+.registro-card h4 { margin:0 0 9px; font-size:14px; }
+.registro-card p { margin:5px 0; color:#817b8d; font-size:12px; }
 
 .registro-botones {
-  display: flex;
-  gap: 7px;
-  margin-top: 12px;
+  display:flex;
+  gap:7px;
+  margin-top:12px;
 }
 
-.modulo-busqueda {
-  margin-top: 12px;
-}
+.modulo-busqueda { margin-top:12px; }
 
 .modulo-vacio {
-  padding: 25px 10px;
-  text-align: center;
-  color: #817b8d;
-  font-size: 13px;
+  padding:25px 10px;
+  text-align:center;
+  color:#817b8d;
+  font-size:13px;
 }
 
 .resumen-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 18px;
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+  margin-bottom:18px;
 }
 
 .resumen-item {
-  background: white;
-  border: 1px solid #ece9f1;
-  border-radius: 12px;
-  padding: 17px;
+  background:white;
+  border:1px solid #ece9f1;
+  border-radius:12px;
+  padding:17px;
 }
 
-.resumen-item small {
-  color: #817b8d;
-  font-size: 11px;
-}
-
-.resumen-item strong {
-  display: block;
-  font-size: 23px;
-  margin-top: 8px;
-}
+.resumen-item small { color:#817b8d; font-size:11px; }
+.resumen-item strong { display:block; font-size:23px; margin-top:8px; }
 
 @media(max-width:800px) {
-  .modulo-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .resumen-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  .modulo-layout { grid-template-columns:1fr; }
+  .resumen-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 `;
 
@@ -323,7 +287,6 @@ function obtenerRegistros(modulo) {
   if (!Array.isArray(baseDatos[modulo])) {
     baseDatos[modulo] = [];
   }
-
   return baseDatos[modulo];
 }
 
@@ -345,7 +308,11 @@ function escapar(valor) {
 }
 
 function fechaActual() {
-  return new Date().toISOString().slice(0, 10);
+  const fecha = new Date();
+  const anio = fecha.getFullYear();
+  const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+  const dia = String(fecha.getDate()).padStart(2, "0");
+  return `${anio}-${mes}-${dia}`;
 }
 
 function registrarAccion(accion, modulo, detalle) {
@@ -361,30 +328,130 @@ function registrarAccion(accion, modulo, detalle) {
   guardarAuditoria();
 }
 
+/* CAMPOS RELACIONADOS */
+
+function obtenerTipoRelacion(modulo, campo) {
+  if (campo === "cliente" &&
+      ["ventas", "consignaciones", "cobros"].includes(modulo)) {
+    return "clientes";
+  }
+
+  if (campo === "producto" &&
+      ["ventas", "consignaciones", "inventario"].includes(modulo)) {
+    return "productos";
+  }
+
+  if (["vendedor", "cobrador", "responsable"].includes(campo)) {
+    return "personal";
+  }
+
+  return null;
+}
+
+function obtenerNombreRegistro(registro, tipo) {
+  if (tipo === "personal" || tipo === "clientes" || tipo === "productos") {
+    return registro.nombre || "";
+  }
+  return "";
+}
+
+function crearCampo(campo, modulo, registroActual = null) {
+  const nombre = campo[0];
+  const etiqueta = campo[1];
+  const obligatorio = campo[2];
+  const valorActual = registroActual?.[nombre] || "";
+  const tipoRelacion = obtenerTipoRelacion(modulo, nombre);
+
+  if (tipoRelacion) {
+    const registros = obtenerRegistros(tipoRelacion);
+    const opciones = registros
+      .map(registro => obtenerNombreRegistro(registro, tipoRelacion))
+      .filter(Boolean);
+
+    let opcionesHTML = `
+      <option value="">Seleccionar ${escapar(etiqueta.toLowerCase())}</option>
+    `;
+
+    if (valorActual && !opciones.includes(valorActual)) {
+      opcionesHTML += `
+        <option value="${escapar(valorActual)}" selected>
+          ${escapar(valorActual)} (registro anterior)
+        </option>
+      `;
+    }
+
+    opciones.forEach(nombre => {
+      opcionesHTML += `
+        <option value="${escapar(nombre)}"
+          ${nombre === valorActual ? "selected" : ""}>
+          ${escapar(nombre)}
+        </option>
+      `;
+    });
+
+    return `
+      <label>
+        ${escapar(etiqueta)}
+        <select name="${nombre}" ${obligatorio ? "required" : ""}>
+          ${opcionesHTML}
+        </select>
+        ${opciones.length === 0
+          ? `<small>No hay registros. Primero agrega información en ${tipoRelacion === "personal" ? "Personal" : tipoRelacion === "clientes" ? "Clientes" : "Productos"}.</small>`
+          : ""}
+      </label>
+    `;
+  }
+
+  if (nombre === "observacion" || nombre === "direccion" ||
+      nombre === "descripcion") {
+    return `
+      <label>
+        ${escapar(etiqueta)}
+        <textarea name="${nombre}"
+          placeholder="${escapar(etiqueta)}">${escapar(valorActual)}</textarea>
+      </label>
+    `;
+  }
+
+  if (nombre === "fecha") {
+    return `
+      <label>
+        ${escapar(etiqueta)}
+        <input type="date" name="${nombre}"
+          value="${escapar(valorActual || fechaActual())}"
+          ${obligatorio ? "required" : ""}>
+      </label>
+    `;
+  }
+
+  return `
+    <label>
+      ${escapar(etiqueta)}
+      <input type="text" name="${nombre}"
+        value="${escapar(valorActual)}"
+        placeholder="${escapar(etiqueta)}"
+        ${obligatorio ? "required" : ""}>
+    </label>
+  `;
+}
+
 /* NAVEGACIÓN */
 
 function abrirModulo(vista) {
   if (!content) return;
 
   moduloActual = vista;
-  registroEditando = null;
 
   document.querySelectorAll(".nav-item").forEach(item => {
-    item.classList.toggle(
-      "active",
-      item.dataset.view === vista
-    );
+    item.classList.toggle("active", item.dataset.view === vista);
   });
 
   if (pageTitle) {
     pageTitle.textContent =
-      vista === "inicio"
-        ? "Resumen general"
-        : vista === "reportes"
-          ? "Reportes"
-          : vista === "auditoria"
-            ? "Historial y auditoría"
-            : modulos[vista]?.titulo || "El Imperio de la Moda";
+      vista === "inicio" ? "Resumen general" :
+      vista === "reportes" ? "Reportes" :
+      vista === "auditoria" ? "Historial y auditoría" :
+      modulos[vista]?.titulo || "El Imperio de la Moda";
   }
 
   sidebar?.classList.remove("open");
@@ -413,8 +480,7 @@ document.getElementById("menuBtn")?.addEventListener("click", () => {
 /* INICIO */
 
 function mostrarInicio() {
-  const total = modulo =>
-    obtenerRegistros(modulo).length;
+  const total = modulo => obtenerRegistros(modulo).length;
 
   content.innerHTML = `
     <section class="welcome">
@@ -432,30 +498,12 @@ function mostrarInicio() {
     </div>
 
     <div class="resumen-grid">
-      <div class="resumen-item">
-        <small>Clientes</small>
-        <strong>${total("clientes")}</strong>
-      </div>
-      <div class="resumen-item">
-        <small>Productos</small>
-        <strong>${total("productos")}</strong>
-      </div>
-      <div class="resumen-item">
-        <small>Trabajadores</small>
-        <strong>${total("personal")}</strong>
-      </div>
-      <div class="resumen-item">
-        <small>Ventas</small>
-        <strong>${total("ventas")}</strong>
-      </div>
-      <div class="resumen-item">
-        <small>Consignaciones</small>
-        <strong>${total("consignaciones")}</strong>
-      </div>
-      <div class="resumen-item">
-        <small>Cobros</small>
-        <strong>${total("cobros")}</strong>
-      </div>
+      <div class="resumen-item"><small>Clientes</small><strong>${total("clientes")}</strong></div>
+      <div class="resumen-item"><small>Productos</small><strong>${total("productos")}</strong></div>
+      <div class="resumen-item"><small>Trabajadores</small><strong>${total("personal")}</strong></div>
+      <div class="resumen-item"><small>Ventas</small><strong>${total("ventas")}</strong></div>
+      <div class="resumen-item"><small>Consignaciones</small><strong>${total("consignaciones")}</strong></div>
+      <div class="resumen-item"><small>Cobros</small><strong>${total("cobros")}</strong></div>
     </div>
 
     <section class="modulo-card">
@@ -465,27 +513,19 @@ function mostrarInicio() {
   `;
 }
 
-/* MÓDULOS DE REGISTRO */
+/* MÓDULOS */
 
-function mostrarModulo(modulo) {
+function mostrarModulo(modulo, idEditar = null) {
   const config = modulos[modulo];
-
   if (!config) return;
 
-  const campos = config.campos.map(campo => `
-    <label>
-      ${escapar(campo[1])}
-      ${campo[0] === "observacion" || campo[0] === "direccion"
-        ? `<textarea name="${campo[0]}" placeholder="${escapar(campo[1])}"></textarea>`
-        : `<input
-            name="${campo[0]}"
-            ${campo[0] === "fecha" ? `type="date" value="${fechaActual()}"` : "type=\"text\""}
-            ${campo[2] ? "required" : ""}
-            placeholder="${escapar(campo[1])}"
-          >`
-      }
-    </label>
-  `).join("");
+  const registroActual = idEditar
+    ? obtenerRegistros(modulo).find(item => item.id === idEditar)
+    : null;
+
+  const campos = config.campos
+    .map(campo => crearCampo(campo, modulo, registroActual))
+    .join("");
 
   content.innerHTML = `
     <div class="modulo-header">
@@ -496,17 +536,17 @@ function mostrarModulo(modulo) {
 
     <div class="modulo-layout">
       <section class="modulo-card">
-        <h3 id="tituloFormulario">Nuevo registro</h3>
+        <h3 id="tituloFormulario">${registroActual ? "Editar registro" : "Nuevo registro"}</h3>
 
         <form class="modulo-form" id="formRegistro">
-          <input type="hidden" name="registroId">
+          <input type="hidden" name="registroId"
+            value="${escapar(registroActual?.id || "")}">
           ${campos}
 
           <div class="modulo-actions">
             <button class="btn-principal" type="submit">
-              Guardar registro
+              ${registroActual ? "Actualizar registro" : "Guardar registro"}
             </button>
-
             <button class="btn-secundario" type="button" id="limpiarFormulario">
               Limpiar
             </button>
@@ -516,13 +556,8 @@ function mostrarModulo(modulo) {
 
       <section class="modulo-card">
         <h3>Registros guardados</h3>
-
-        <input
-          class="modulo-busqueda"
-          id="buscarRegistro"
-          placeholder="Buscar registros..."
-        >
-
+        <input class="modulo-busqueda" id="buscarRegistro"
+          placeholder="Buscar registros...">
         <div class="modulo-lista" id="listaRegistros"></div>
       </section>
     </div>
@@ -544,6 +579,9 @@ function guardarRegistro(evento) {
   evento.preventDefault();
 
   const formulario = evento.currentTarget;
+
+  if (!formulario.reportValidity()) return;
+
   const datos = new FormData(formulario);
   const id = String(datos.get("registroId") || "");
 
@@ -561,10 +599,9 @@ function guardarRegistro(evento) {
 
   if (id) {
     const indice = registros.findIndex(item => item.id === id);
-
     if (indice === -1) return;
 
-    registro.creado = registros[indice].creado;
+    registro.creado = registros[indice].creado || registro.creado;
     registros[indice] = registro;
 
     registrarAccion(
@@ -583,38 +620,27 @@ function guardarRegistro(evento) {
   }
 
   guardarDatos();
-  limpiarFormulario();
-  renderizarRegistros();
+  mostrarModulo(moduloActual);
 
-  alert(id ? "Registro actualizado." : "Registro guardado correctamente.");
+  alert(id ? "Registro actualizado correctamente." : "Registro guardado correctamente.");
 }
 
 function limpiarFormulario() {
   const formulario = document.getElementById("formRegistro");
-
   if (!formulario) return;
 
   formulario.reset();
   formulario.elements.registroId.value = "";
 
-  const titulo = document.getElementById("tituloFormulario");
-
-  if (titulo) {
-    titulo.textContent = "Nuevo registro";
-  }
-
   const fecha = formulario.elements.fecha;
+  if (fecha) fecha.value = fechaActual();
 
-  if (fecha) {
-    fecha.value = fechaActual();
-  }
-
-  registroEditando = null;
+  const titulo = document.getElementById("tituloFormulario");
+  if (titulo) titulo.textContent = "Nuevo registro";
 }
 
 function renderizarRegistros() {
   const lista = document.getElementById("listaRegistros");
-
   if (!lista) return;
 
   const registros = obtenerRegistros(moduloActual);
@@ -622,17 +648,12 @@ function renderizarRegistros() {
     .value.trim().toLowerCase();
 
   const filtrados = registros.filter(registro =>
-    Object.values(registro)
-      .join(" ")
-      .toLowerCase()
-      .includes(busqueda)
+    Object.values(registro).join(" ").toLowerCase().includes(busqueda)
   );
 
   if (!filtrados.length) {
     lista.innerHTML = `
-      <div class="modulo-vacio">
-        No hay registros que mostrar.
-      </div>
+      <div class="modulo-vacio">No hay registros que mostrar.</div>
     `;
     return;
   }
@@ -640,8 +661,7 @@ function renderizarRegistros() {
   lista.innerHTML = filtrados.map(registro => {
     const config = modulos[moduloActual];
 
-    const titulo =
-      registro.nombre ||
+    const titulo = registro.nombre ||
       registro.cliente ||
       registro.producto ||
       "Registro";
@@ -657,19 +677,11 @@ function renderizarRegistros() {
       <article class="registro-card">
         <h4>${escapar(titulo)}</h4>
         ${detalles}
-
         <div class="registro-botones">
-          <button
-            class="btn-pequeno"
-            type="button"
-            data-editar="${escapar(registro.id)}"
-          >Editar</button>
-
-          <button
-            class="btn-peligro"
-            type="button"
-            data-eliminar="${escapar(registro.id)}"
-          >Eliminar</button>
+          <button class="btn-pequeno" type="button"
+            data-editar="${escapar(registro.id)}">Editar</button>
+          <button class="btn-peligro" type="button"
+            data-eliminar="${escapar(registro.id)}">Eliminar</button>
         </div>
       </article>
     `;
@@ -677,7 +689,7 @@ function renderizarRegistros() {
 
   lista.querySelectorAll("[data-editar]").forEach(boton => {
     boton.addEventListener("click", () => {
-      editarRegistro(boton.dataset.editar);
+      mostrarModulo(moduloActual, boton.dataset.editar);
     });
   });
 
@@ -688,41 +700,12 @@ function renderizarRegistros() {
   });
 }
 
-function editarRegistro(id) {
-  const registro = obtenerRegistros(moduloActual)
-    .find(item => item.id === id);
-
-  if (!registro) return;
-
-  const formulario = document.getElementById("formRegistro");
-
-  formulario.elements.registroId.value = registro.id;
-
-  modulos[moduloActual].campos.forEach(campo => {
-    const entrada = formulario.elements[campo[0]];
-
-    if (entrada) {
-      entrada.value = registro[campo[0]] || "";
-    }
-  });
-
-  document.getElementById("tituloFormulario").textContent =
-    "Editar registro";
-
-  formulario.scrollIntoView({
-    behavior: "smooth",
-    block: "start"
-  });
-}
-
 function eliminarRegistro(id) {
   const registros = obtenerRegistros(moduloActual);
   const registro = registros.find(item => item.id === id);
-
   if (!registro) return;
 
-  const titulo =
-    registro.nombre ||
+  const titulo = registro.nombre ||
     registro.cliente ||
     registro.producto ||
     "este registro";
@@ -730,7 +713,6 @@ function eliminarRegistro(id) {
   if (!confirm(`¿Deseas eliminar ${titulo}?`)) return;
 
   baseDatos[moduloActual] = registros.filter(item => item.id !== id);
-
   guardarDatos();
 
   registrarAccion(
@@ -761,35 +743,12 @@ function mostrarReportes() {
     </div>
 
     <div class="resumen-grid">
-      <div class="resumen-item">
-        <small>Clientes</small>
-        <strong>${contar("clientes")}</strong>
-      </div>
-
-      <div class="resumen-item">
-        <small>Productos</small>
-        <strong>${contar("productos")}</strong>
-      </div>
-
-      <div class="resumen-item">
-        <small>Ventas registradas</small>
-        <strong>${contar("ventas")}</strong>
-      </div>
-
-      <div class="resumen-item">
-        <small>Consignaciones</small>
-        <strong>${contar("consignaciones")}</strong>
-      </div>
-
-      <div class="resumen-item">
-        <small>Cobros registrados</small>
-        <strong>${contar("cobros")}</strong>
-      </div>
-
-      <div class="resumen-item">
-        <small>Personal</small>
-        <strong>${contar("personal")}</strong>
-      </div>
+      <div class="resumen-item"><small>Clientes</small><strong>${contar("clientes")}</strong></div>
+      <div class="resumen-item"><small>Productos</small><strong>${contar("productos")}</strong></div>
+      <div class="resumen-item"><small>Ventas registradas</small><strong>${contar("ventas")}</strong></div>
+      <div class="resumen-item"><small>Consignaciones</small><strong>${contar("consignaciones")}</strong></div>
+      <div class="resumen-item"><small>Cobros registrados</small><strong>${contar("cobros")}</strong></div>
+      <div class="resumen-item"><small>Personal</small><strong>${contar("personal")}</strong></div>
     </div>
 
     <section class="modulo-card">
