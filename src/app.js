@@ -1,9 +1,11 @@
-
 /* =====================================================
    EL IMPERIO DE LA MODA
-   Administración con formularios relacionados
+   Administración comercial
+   Clientes, expedientes, GPS, fotos e historial
    Almacenamiento local del navegador
 ===================================================== */
+
+"use strict";
 
 const DB_KEY = "imperio-moda-database-v1";
 const AUDIT_KEY = "imperio-moda-auditoria-v1";
@@ -17,8 +19,9 @@ const modulos = {
     titulo: "Personal y permisos",
     descripcion: "Administra los trabajadores y sus responsabilidades.",
     campos: [
-      ["nombre", "Nombre del trabajador", true],
+      ["nombre", "Nombre completo del trabajador", true],
       ["telefono", "Teléfono", false],
+      ["documento", "Cédula o documento", false],
       ["cargo", "Cargo", false],
       ["usuario", "Nombre de usuario", false],
       ["permiso", "Permisos o funciones", false]
@@ -27,13 +30,19 @@ const modulos = {
 
   clientes: {
     titulo: "Clientes",
-    descripcion: "Directorio general de clientes.",
+    descripcion: "Directorio de clientes y expedientes individuales.",
     campos: [
       ["nombre", "Nombre completo", true],
       ["telefono", "Teléfono", false],
       ["documento", "Cédula o documento", false],
-      ["direccion", "Dirección", false],
-      ["zona", "Zona o sector", false]
+      ["direccion", "Dirección completa", false],
+      ["municipio", "Municipio", false],
+      ["estado", "Estado", false],
+      ["zona", "Zona o sector", false],
+      ["referencia", "Referencia para encontrar la vivienda", false],
+      ["latitud", "Latitud GPS", false],
+      ["longitud", "Longitud GPS", false],
+      ["observacion", "Notas generales", false]
     ]
   },
 
@@ -54,7 +63,7 @@ const modulos = {
     titulo: "Inventario",
     descripcion: "Control de existencias y movimientos de mercancía.",
     campos: [
-      ["producto", "Nombre del producto", true],
+      ["producto", "Producto", true],
       ["codigo", "Código del producto", false],
       ["cantidad", "Cantidad disponible", true],
       ["minimo", "Cantidad mínima", false],
@@ -71,7 +80,7 @@ const modulos = {
       ["producto", "Producto vendido", true],
       ["cantidad", "Cantidad", true],
       ["total", "Total de la venta", true],
-      ["vendedor", "Trabajador que realizó la venta", false],
+      ["vendedor", "Trabajador responsable", false],
       ["fecha", "Fecha de la venta", true],
       ["observacion", "Observaciones", false]
     ]
@@ -81,7 +90,7 @@ const modulos = {
     titulo: "Consignaciones",
     descripcion: "Control de mercancía entregada en consignación.",
     campos: [
-      ["cliente", "Cliente o responsable", true],
+      ["cliente", "Cliente responsable", true],
       ["producto", "Producto entregado", true],
       ["cantidad", "Cantidad entregada", true],
       ["fecha", "Fecha de entrega", true],
@@ -93,14 +102,40 @@ const modulos = {
 
   cobros: {
     titulo: "Cobros",
-    descripcion: "Control de pagos recibidos y referencias bancarias.",
+    descripcion: "Control de pagos recibidos.",
     campos: [
       ["cliente", "Cliente que realizó el pago", true],
       ["monto", "Monto recibido", true],
-      ["referencia", "Número de referencia del pago", false],
+      ["referencia", "Número de referencia", false],
       ["metodo", "Método de pago", false],
       ["cobrador", "Trabajador que recibió el pago", true],
       ["fecha", "Fecha del cobro", true],
+      ["observacion", "Observaciones", false]
+    ]
+  },
+
+  regalos: {
+    titulo: "Regalos entregados",
+    descripcion: "Control de obsequios entregados a los clientes.",
+    campos: [
+      ["cliente", "Cliente", true],
+      ["regalo", "Regalo entregado", true],
+      ["fecha", "Fecha de entrega", true],
+      ["trabajador", "Trabajador responsable", false],
+      ["motivo", "Motivo o compra relacionada", false],
+      ["observacion", "Observaciones", false]
+    ]
+  },
+
+  visitas: {
+    titulo: "Visitas y atención",
+    descripcion: "Registro de visitas realizadas a los clientes.",
+    campos: [
+      ["cliente", "Cliente visitado", true],
+      ["fecha", "Fecha de visita", true],
+      ["trabajador", "Trabajador responsable", false],
+      ["motivo", "Motivo de la visita", false],
+      ["resultado", "Resultado de la visita", false],
       ["observacion", "Observaciones", false]
     ]
   },
@@ -121,6 +156,7 @@ const modulos = {
 let baseDatos = cargarDatos();
 let auditoria = cargarAuditoria();
 let moduloActual = "inicio";
+let clienteExpedienteActual = null;
 
 /* ESTILOS */
 
@@ -177,11 +213,12 @@ estilos.textContent = `
   resize:vertical;
 }
 
-.modulo-actions {
+.modulo-actions,
+.registro-botones {
   display:flex;
   flex-wrap:wrap;
   gap:8px;
-  margin-top:5px;
+  margin-top:10px;
 }
 
 .btn-principal,
@@ -217,12 +254,6 @@ estilos.textContent = `
 .registro-card h4 { margin:0 0 9px; font-size:14px; }
 .registro-card p { margin:5px 0; color:#817b8d; font-size:12px; }
 
-.registro-botones {
-  display:flex;
-  gap:7px;
-  margin-top:12px;
-}
-
 .modulo-busqueda { margin-top:12px; }
 
 .modulo-vacio {
@@ -244,10 +275,75 @@ estilos.textContent = `
   border:1px solid #ece9f1;
   border-radius:12px;
   padding:17px;
+  cursor:pointer;
 }
 
 .resumen-item small { color:#817b8d; font-size:11px; }
 .resumen-item strong { display:block; font-size:23px; margin-top:8px; }
+
+.tarjeta-expediente {
+  background:white;
+  border:1px solid #ece9f1;
+  border-radius:13px;
+  padding:20px;
+  margin-bottom:16px;
+}
+
+.exp-numero {
+  color:#6d4bc3;
+  font-size:13px;
+  font-weight:800;
+}
+
+.exp-foto {
+  width:100%;
+  max-width:340px;
+  max-height:260px;
+  object-fit:cover;
+  border-radius:12px;
+  display:block;
+  margin:12px 0;
+}
+
+.exp-dato {
+  padding:10px 0;
+  border-bottom:1px solid #f0edf4;
+  font-size:13px;
+  overflow-wrap:anywhere;
+}
+
+.exp-dato strong {
+  display:block;
+  color:#51485f;
+  margin-bottom:4px;
+}
+
+.exp-seccion {
+  margin-top:22px;
+}
+
+.exp-seccion h3 {
+  font-size:16px;
+  margin-bottom:12px;
+}
+
+.gps-destacado {
+  background:#f3effa;
+  padding:13px;
+  border-radius:10px;
+  margin-top:12px;
+  overflow-wrap:anywhere;
+}
+
+.gps-destacado a {
+  color:#684bb0;
+  font-weight:700;
+}
+
+.boton-gps {
+  background:#eaf5ed;
+  color:#287342;
+}
 
 @media(max-width:800px) {
   .modulo-layout { grid-template-columns:1fr; }
@@ -276,11 +372,21 @@ function cargarAuditoria() {
 }
 
 function guardarDatos() {
-  localStorage.setItem(DB_KEY, JSON.stringify(baseDatos));
+  try {
+    localStorage.setItem(DB_KEY, JSON.stringify(baseDatos));
+    return true;
+  } catch (error) {
+    alert("No se pudo guardar. Es posible que el almacenamiento esté lleno. Prueba con una foto más pequeña.");
+    return false;
+  }
 }
 
 function guardarAuditoria() {
-  localStorage.setItem(AUDIT_KEY, JSON.stringify(auditoria));
+  try {
+    localStorage.setItem(AUDIT_KEY, JSON.stringify(auditoria));
+  } catch (error) {
+    console.warn("No se pudo guardar el historial de auditoría.", error);
+  }
 }
 
 function obtenerRegistros(modulo) {
@@ -315,6 +421,13 @@ function fechaActual() {
   return `${anio}-${mes}-${dia}`;
 }
 
+function fechaBonita(valor) {
+  if (!valor) return "No registrada";
+  const partes = String(valor).split("-");
+  if (partes.length !== 3) return escapar(valor);
+  return `${partes[2]}/${partes[1]}/${partes[0]}`;
+}
+
 function registrarAccion(accion, modulo, detalle) {
   auditoria.unshift({
     id: crearId(),
@@ -328,11 +441,33 @@ function registrarAccion(accion, modulo, detalle) {
   guardarAuditoria();
 }
 
-/* CAMPOS RELACIONADOS */
+function siguienteNumeroCliente() {
+  const clientes = obtenerRegistros("clientes");
+  let mayor = 0;
+
+  clientes.forEach(cliente => {
+    const numero = Number(cliente.numeroCliente || 0);
+    if (numero > mayor) mayor = numero;
+  });
+
+  return mayor + 1;
+}
+
+function formatoNumeroCliente(cliente) {
+  if (!cliente.numeroCliente) return "Cliente sin número";
+  return "Cliente #" + String(cliente.numeroCliente).padStart(3, "0");
+}
+
+function nombreClientePorId(id) {
+  const cliente = obtenerRegistros("clientes").find(item => item.id === id);
+  return cliente ? cliente.nombre : "";
+}
+
+/* RELACIONES */
 
 function obtenerTipoRelacion(modulo, campo) {
   if (campo === "cliente" &&
-      ["ventas", "consignaciones", "cobros"].includes(modulo)) {
+      ["ventas", "consignaciones", "cobros", "regalos", "visitas"].includes(modulo)) {
     return "clientes";
   }
 
@@ -341,18 +476,15 @@ function obtenerTipoRelacion(modulo, campo) {
     return "productos";
   }
 
-  if (["vendedor", "cobrador", "responsable"].includes(campo)) {
+  if (["vendedor", "cobrador", "responsable", "trabajador"].includes(campo)) {
     return "personal";
   }
 
   return null;
 }
 
-function obtenerNombreRegistro(registro, tipo) {
-  if (tipo === "personal" || tipo === "clientes" || tipo === "productos") {
-    return registro.nombre || "";
-  }
-  return "";
+function obtenerNombreRegistro(registro) {
+  return registro.nombre || "";
 }
 
 function crearCampo(campo, modulo, registroActual = null) {
@@ -365,7 +497,7 @@ function crearCampo(campo, modulo, registroActual = null) {
   if (tipoRelacion) {
     const registros = obtenerRegistros(tipoRelacion);
     const opciones = registros
-      .map(registro => obtenerNombreRegistro(registro, tipoRelacion))
+      .map(registro => obtenerNombreRegistro(registro))
       .filter(Boolean);
 
     let opcionesHTML = `
@@ -380,11 +512,11 @@ function crearCampo(campo, modulo, registroActual = null) {
       `;
     }
 
-    opciones.forEach(nombre => {
+    opciones.forEach(nombreOpcion => {
       opcionesHTML += `
-        <option value="${escapar(nombre)}"
-          ${nombre === valorActual ? "selected" : ""}>
-          ${escapar(nombre)}
+        <option value="${escapar(nombreOpcion)}"
+          ${nombreOpcion === valorActual ? "selected" : ""}>
+          ${escapar(nombreOpcion)}
         </option>
       `;
     });
@@ -396,14 +528,15 @@ function crearCampo(campo, modulo, registroActual = null) {
           ${opcionesHTML}
         </select>
         ${opciones.length === 0
-          ? `<small>No hay registros. Primero agrega información en ${tipoRelacion === "personal" ? "Personal" : tipoRelacion === "clientes" ? "Clientes" : "Productos"}.</small>`
+          ? "<small>Primero agrega registros en la sección correspondiente.</small>"
           : ""}
       </label>
     `;
   }
 
   if (nombre === "observacion" || nombre === "direccion" ||
-      nombre === "descripcion") {
+      nombre === "descripcion" || nombre === "referencia" ||
+      nombre === "permiso") {
     return `
       <label>
         ${escapar(etiqueta)}
@@ -424,12 +557,19 @@ function crearCampo(campo, modulo, registroActual = null) {
     `;
   }
 
+  const tipo = ["latitud", "longitud", "precio", "costo", "cantidad", "minimo", "total", "monto"].includes(nombre)
+    ? "number"
+    : "text";
+
+  const paso = tipo === "number" ? 'step="any"' : "";
+
   return `
     <label>
       ${escapar(etiqueta)}
-      <input type="text" name="${nombre}"
+      <input type="${tipo}" name="${nombre}"
         value="${escapar(valorActual)}"
         placeholder="${escapar(etiqueta)}"
+        ${paso}
         ${obligatorio ? "required" : ""}>
     </label>
   `;
@@ -441,6 +581,7 @@ function abrirModulo(vista) {
   if (!content) return;
 
   moduloActual = vista;
+  clienteExpedienteActual = null;
 
   document.querySelectorAll(".nav-item").forEach(item => {
     item.classList.toggle("active", item.dataset.view === vista);
@@ -482,6 +623,18 @@ document.getElementById("menuBtn")?.addEventListener("click", () => {
 function mostrarInicio() {
   const total = modulo => obtenerRegistros(modulo).length;
 
+  const tarjetas = [
+    ["clientes", "Clientes", total("clientes")],
+    ["productos", "Productos", total("productos")],
+    ["personal", "Trabajadores", total("personal")],
+    ["ventas", "Ventas", total("ventas")],
+    ["consignaciones", "Consignaciones", total("consignaciones")],
+    ["cobros", "Cobros", total("cobros")],
+    ["regalos", "Regalos entregados", total("regalos")],
+    ["visitas", "Visitas", total("visitas")],
+    ["zonas", "Zonas", total("zonas")]
+  ];
+
   content.innerHTML = `
     <section class="welcome">
       <div>
@@ -494,23 +647,32 @@ function mostrarInicio() {
 
     <div class="notice">
       <strong>Panel general</strong>
-      <span>Resumen de los registros guardados en este dispositivo.</span>
+      <span>Selecciona cualquiera de las tarjetas para abrir su sección.</span>
     </div>
 
     <div class="resumen-grid">
-      <div class="resumen-item"><small>Clientes</small><strong>${total("clientes")}</strong></div>
-      <div class="resumen-item"><small>Productos</small><strong>${total("productos")}</strong></div>
-      <div class="resumen-item"><small>Trabajadores</small><strong>${total("personal")}</strong></div>
-      <div class="resumen-item"><small>Ventas</small><strong>${total("ventas")}</strong></div>
-      <div class="resumen-item"><small>Consignaciones</small><strong>${total("consignaciones")}</strong></div>
-      <div class="resumen-item"><small>Cobros</small><strong>${total("cobros")}</strong></div>
+      ${tarjetas.map(item => `
+        <div class="resumen-item" data-ir="${item[0]}" role="button" tabindex="0">
+          <small>${escapar(item[1])}</small>
+          <strong>${item[2]}</strong>
+        </div>
+      `).join("")}
     </div>
 
     <section class="modulo-card">
       <h3>Administración del negocio</h3>
-      <p>Selecciona una sección en el menú para comenzar a registrar información.</p>
+      <p>Los datos se guardan en el almacenamiento de este navegador.</p>
+      <p>Para comenzar, registra tus clientes y sus ubicaciones.</p>
     </section>
   `;
+
+  content.querySelectorAll("[data-ir]").forEach(tarjeta => {
+    const ir = () => abrirModulo(tarjeta.dataset.ir);
+    tarjeta.addEventListener("click", ir);
+    tarjeta.addEventListener("keydown", evento => {
+      if (evento.key === "Enter" || evento.key === " ") ir();
+    });
+  });
 }
 
 /* MÓDULOS */
@@ -519,6 +681,8 @@ function mostrarModulo(modulo, idEditar = null) {
   const config = modulos[modulo];
   if (!config) return;
 
+  moduloActual = modulo;
+
   const registroActual = idEditar
     ? obtenerRegistros(modulo).find(item => item.id === idEditar)
     : null;
@@ -526,6 +690,24 @@ function mostrarModulo(modulo, idEditar = null) {
   const campos = config.campos
     .map(campo => crearCampo(campo, modulo, registroActual))
     .join("");
+
+  const campoFoto = modulo === "clientes" ? `
+    <label>
+      Foto del frente de la vivienda (opcional)
+      <input type="file" id="fotoCliente" accept="image/*" capture="environment">
+      <small>La foto se guarda en este navegador. Es recomendable usar una imagen pequeña.</small>
+      ${registroActual?.foto
+        ? `<img class="exp-foto" src="${registroActual.foto}" alt="Foto de la vivienda">`
+        : ""}
+    </label>
+  ` : "";
+
+  const botonGPS = modulo === "clientes" ? `
+    <button class="btn-secundario boton-gps" type="button" id="obtenerGPS">
+      Obtener ubicación GPS
+    </button>
+    <small id="estadoGPS">Permite el acceso a la ubicación cuando el teléfono lo solicite.</small>
+  ` : "";
 
   content.innerHTML = `
     <div class="modulo-header">
@@ -542,6 +724,8 @@ function mostrarModulo(modulo, idEditar = null) {
           <input type="hidden" name="registroId"
             value="${escapar(registroActual?.id || "")}">
           ${campos}
+          ${botonGPS}
+          ${campoFoto}
 
           <div class="modulo-actions">
             <button class="btn-principal" type="submit">
@@ -572,10 +756,101 @@ function mostrarModulo(modulo, idEditar = null) {
   document.getElementById("buscarRegistro")
     .addEventListener("input", renderizarRegistros);
 
+  document.getElementById("obtenerGPS")?.addEventListener("click", obtenerGPS);
+
   renderizarRegistros();
 }
 
-function guardarRegistro(evento) {
+/* GPS */
+
+function obtenerGPS() {
+  const estado = document.getElementById("estadoGPS");
+
+  if (!navigator.geolocation) {
+    if (estado) estado.textContent = "Este navegador no permite obtener GPS.";
+    return;
+  }
+
+  if (estado) estado.textContent = "Buscando ubicación...";
+
+  navigator.geolocation.getCurrentPosition(
+    posicion => {
+      const latitud = document.querySelector('[name="latitud"]');
+      const longitud = document.querySelector('[name="longitud"]');
+
+      if (latitud) latitud.value = posicion.coords.latitude;
+      if (longitud) longitud.value = posicion.coords.longitude;
+
+      if (estado) estado.textContent = "Ubicación obtenida correctamente.";
+    },
+    error => {
+      if (estado) {
+        estado.textContent = "No se pudo obtener la ubicación. Revisa los permisos de GPS del teléfono.";
+      }
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0
+    }
+  );
+}
+
+/* FOTO DEL CLIENTE */
+
+function leerFotoCliente() {
+  return new Promise(resolve => {
+    const archivo = document.getElementById("fotoCliente")?.files?.[0];
+
+    if (!archivo) {
+      resolve(null);
+      return;
+    }
+
+    if (!archivo.type.startsWith("image/")) {
+      alert("Selecciona una imagen válida.");
+      resolve(null);
+      return;
+    }
+
+    const lector = new FileReader();
+
+    lector.onload = () => {
+      const imagen = new Image();
+
+      imagen.onload = () => {
+        const maximo = 900;
+        let ancho = imagen.width;
+        let alto = imagen.height;
+
+        if (ancho > maximo || alto > maximo) {
+          const escala = Math.min(maximo / ancho, maximo / alto);
+          ancho = Math.round(ancho * escala);
+          alto = Math.round(alto * escala);
+        }
+
+        const lienzo = document.createElement("canvas");
+        lienzo.width = ancho;
+        lienzo.height = alto;
+
+        const contexto = lienzo.getContext("2d");
+        contexto.drawImage(imagen, 0, 0, ancho, alto);
+
+        resolve(lienzo.toDataURL("image/jpeg", 0.72));
+      };
+
+      imagen.onerror = () => resolve(null);
+      imagen.src = lector.result;
+    };
+
+    lector.onerror = () => resolve(null);
+    lector.readAsDataURL(archivo);
+  });
+}
+
+/* GUARDAR */
+
+async function guardarRegistro(evento) {
   evento.preventDefault();
 
   const formulario = evento.currentTarget;
@@ -584,9 +859,14 @@ function guardarRegistro(evento) {
 
   const datos = new FormData(formulario);
   const id = String(datos.get("registroId") || "");
+  const registros = obtenerRegistros(moduloActual);
 
-  const registro = {
-    id: id || crearId(),
+  const anterior = id
+    ? registros.find(item => item.id === id)
+    : null;
+
+  const registro = anterior ? { ...anterior } : {
+    id: crearId(),
     creado: new Date().toISOString(),
     actualizado: new Date().toISOString()
   };
@@ -595,19 +875,31 @@ function guardarRegistro(evento) {
     registro[campo[0]] = String(datos.get(campo[0]) || "").trim();
   });
 
-  const registros = obtenerRegistros(moduloActual);
+  registro.actualizado = new Date().toISOString();
 
-  if (id) {
+  if (moduloActual === "clientes" && !anterior) {
+    registro.numeroCliente = siguienteNumeroCliente();
+    registro.fechaRegistro = fechaActual();
+  }
+
+  if (moduloActual === "clientes" && anterior && !registro.numeroCliente) {
+    registro.numeroCliente = siguienteNumeroCliente();
+  }
+
+  if (moduloActual === "clientes") {
+    const foto = await leerFotoCliente();
+    if (foto) registro.foto = foto;
+  }
+
+  if (anterior) {
     const indice = registros.findIndex(item => item.id === id);
     if (indice === -1) return;
-
-    registro.creado = registros[indice].creado || registro.creado;
     registros[indice] = registro;
 
     registrarAccion(
       "Edición",
       modulos[moduloActual].titulo,
-      registro.nombre || registro.cliente || registro.producto || id
+      registro.nombre || registro.cliente || id
     );
   } else {
     registros.unshift(registro);
@@ -619,11 +911,16 @@ function guardarRegistro(evento) {
     );
   }
 
-  guardarDatos();
+  if (!guardarDatos()) return;
+
   mostrarModulo(moduloActual);
 
-  alert(id ? "Registro actualizado correctamente." : "Registro guardado correctamente.");
+  alert(anterior
+    ? "Registro actualizado correctamente."
+    : "Registro guardado correctamente.");
 }
+
+/* LIMPIAR FORMULARIO */
 
 function limpiarFormulario() {
   const formulario = document.getElementById("formRegistro");
@@ -637,7 +934,12 @@ function limpiarFormulario() {
 
   const titulo = document.getElementById("tituloFormulario");
   if (titulo) titulo.textContent = "Nuevo registro";
+
+  const foto = formulario.querySelector(".exp-foto");
+  if (foto) foto.remove();
 }
+
+/* LISTA DE REGISTROS */
 
 function renderizarRegistros() {
   const lista = document.getElementById("listaRegistros");
@@ -664,6 +966,7 @@ function renderizarRegistros() {
     const titulo = registro.nombre ||
       registro.cliente ||
       registro.producto ||
+      registro.regalo ||
       "Registro";
 
     const detalles = config.campos
@@ -673,11 +976,22 @@ function renderizarRegistros() {
         ${escapar(registro[campo[0]])}</p>
       `).join("");
 
+    const numero = moduloActual === "clientes"
+      ? `<p class="exp-numero">${formatoNumeroCliente(registro)}</p>`
+      : "";
+
+    const botonExpediente = moduloActual === "clientes"
+      ? `<button class="btn-principal" type="button"
+          data-expediente="${escapar(registro.id)}">Ver expediente</button>`
+      : "";
+
     return `
       <article class="registro-card">
+        ${numero}
         <h4>${escapar(titulo)}</h4>
         ${detalles}
         <div class="registro-botones">
+          ${botonExpediente}
           <button class="btn-pequeno" type="button"
             data-editar="${escapar(registro.id)}">Editar</button>
           <button class="btn-peligro" type="button"
@@ -686,6 +1000,12 @@ function renderizarRegistros() {
       </article>
     `;
   }).join("");
+
+  lista.querySelectorAll("[data-expediente]").forEach(boton => {
+    boton.addEventListener("click", () => {
+      mostrarExpedienteCliente(boton.dataset.expediente);
+    });
+  });
 
   lista.querySelectorAll("[data-editar]").forEach(boton => {
     boton.addEventListener("click", () => {
@@ -700,6 +1020,114 @@ function renderizarRegistros() {
   });
 }
 
+/* EXPEDIENTE DEL CLIENTE */
+
+function mostrarExpedienteCliente(id) {
+  const cliente = obtenerRegistros("clientes").find(item => item.id === id);
+  if (!cliente) return;
+
+  clienteExpedienteActual = id;
+  moduloActual = "clientes";
+
+  if (pageTitle) pageTitle.textContent = "Expediente del cliente";
+
+  const ventas = obtenerRegistros("ventas").filter(item => item.cliente === cliente.nombre);
+  const consignaciones = obtenerRegistros("consignaciones").filter(item => item.cliente === cliente.nombre);
+  const cobros = obtenerRegistros("cobros").filter(item => item.cliente === cliente.nombre);
+  const regalos = obtenerRegistros("regalos").filter(item => item.cliente === cliente.nombre);
+  const visitas = obtenerRegistros("visitas").filter(item => item.cliente === cliente.nombre);
+
+  const lat = cliente.latitud;
+  const lon = cliente.longitud;
+  const tieneGPS = lat && lon;
+
+  const enlaceMapa = tieneGPS
+    ? `https://www.google.com/maps?q=${encodeURIComponent(lat + "," + lon)}`
+    : "";
+
+  function listaHistorial(titulo, registros, campos) {
+    return `
+      <section class="exp-seccion">
+        <h3>${escapar(titulo)} (${registros.length})</h3>
+        ${registros.length
+          ? registros.map(registro => `
+            <article class="registro-card">
+              ${campos.map(campo => registro[campo]
+                ? `<p><strong>${escapar(campo)}:</strong> ${escapar(registro[campo])}</p>`
+                : "").join("")}
+            </article>
+          `).join("")
+          : `<div class="modulo-vacio">Todavía no hay registros.</div>`}
+      </section>
+    `;
+  }
+
+  content.innerHTML = `
+    <div class="modulo-header">
+      <div class="eyebrow">EL IMPERIO DE LA MODA</div>
+      <h2>Expediente del cliente</h2>
+      <p>Información personal, ubicación y movimientos relacionados.</p>
+      <button class="btn-secundario" id="volverClientes" type="button">
+        Volver a clientes
+      </button>
+    </div>
+
+    <section class="tarjeta-expediente">
+      <div class="exp-numero">${formatoNumeroCliente(cliente)}</div>
+      <h2>${escapar(cliente.nombre)}</h2>
+      <p>Cliente desde: ${fechaBonita(cliente.fechaRegistro || cliente.creado?.slice(0, 10))}</p>
+
+      ${cliente.foto
+        ? `<img class="exp-foto" src="${cliente.foto}" alt="Foto de la vivienda del cliente">`
+        : ""}
+
+      <div class="exp-dato"><strong>Teléfono</strong>${escapar(cliente.telefono || "No registrado")}</div>
+      <div class="exp-dato"><strong>Cédula o documento</strong>${escapar(cliente.documento || "No registrado")}</div>
+      <div class="exp-dato"><strong>Dirección</strong>${escapar(cliente.direccion || "No registrada")}</div>
+      <div class="exp-dato"><strong>Municipio</strong>${escapar(cliente.municipio || "No registrado")}</div>
+      <div class="exp-dato"><strong>Estado</strong>${escapar(cliente.estado || "No registrado")}</div>
+      <div class="exp-dato"><strong>Zona o sector</strong>${escapar(cliente.zona || "No registrado")}</div>
+      <div class="exp-dato"><strong>Referencia de la vivienda</strong>${escapar(cliente.referencia || "No registrada")}</div>
+      <div class="exp-dato"><strong>Notas</strong>${escapar(cliente.observacion || "Sin notas")}</div>
+
+      <div class="gps-destacado">
+        <strong>Ubicación GPS</strong>
+        ${tieneGPS
+          ? `
+            <p>Latitud: ${escapar(lat)}</p>
+            <p>Longitud: ${escapar(lon)}</p>
+            <a href="${enlaceMapa}" target="_blank" rel="noopener">
+              Abrir ubicación en Google Maps
+            </a>
+          `
+          : `<p>Este cliente todavía no tiene ubicación GPS registrada.</p>`}
+      </div>
+
+      <div class="modulo-actions">
+        <button class="btn-principal" id="editarDesdeExpediente" type="button">
+          Editar datos del cliente
+        </button>
+      </div>
+    </section>
+
+    ${listaHistorial("Ventas", ventas, ["fecha", "producto", "cantidad", "total", "vendedor", "observacion"])}
+    ${listaHistorial("Consignaciones", consignaciones, ["fecha", "producto", "cantidad", "vendedor", "estado", "observacion"])}
+    ${listaHistorial("Pagos recibidos", cobros, ["fecha", "monto", "metodo", "referencia", "cobrador", "observacion"])}
+    ${listaHistorial("Regalos entregados", regalos, ["fecha", "regalo", "trabajador", "motivo", "observacion"])}
+    ${listaHistorial("Visitas realizadas", visitas, ["fecha", "trabajador", "motivo", "resultado", "observacion"])}
+  `;
+
+  document.getElementById("volverClientes").addEventListener("click", () => {
+    mostrarModulo("clientes");
+  });
+
+  document.getElementById("editarDesdeExpediente").addEventListener("click", () => {
+    mostrarModulo("clientes", id);
+  });
+}
+
+/* ELIMINAR */
+
 function eliminarRegistro(id) {
   const registros = obtenerRegistros(moduloActual);
   const registro = registros.find(item => item.id === id);
@@ -713,7 +1141,8 @@ function eliminarRegistro(id) {
   if (!confirm(`¿Deseas eliminar ${titulo}?`)) return;
 
   baseDatos[moduloActual] = registros.filter(item => item.id !== id);
-  guardarDatos();
+
+  if (!guardarDatos()) return;
 
   registrarAccion(
     "Eliminación",
@@ -749,6 +1178,8 @@ function mostrarReportes() {
       <div class="resumen-item"><small>Consignaciones</small><strong>${contar("consignaciones")}</strong></div>
       <div class="resumen-item"><small>Cobros registrados</small><strong>${contar("cobros")}</strong></div>
       <div class="resumen-item"><small>Personal</small><strong>${contar("personal")}</strong></div>
+      <div class="resumen-item"><small>Regalos</small><strong>${contar("regalos")}</strong></div>
+      <div class="resumen-item"><small>Visitas</small><strong>${contar("visitas")}</strong></div>
     </div>
 
     <section class="modulo-card">
