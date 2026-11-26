@@ -1,7 +1,8 @@
 /* =====================================================
    EL IMPERIO DE LA MODA
    Administración comercial
-   Clientes, expedientes, GPS, fotos e historial
+   Clientes, expedientes, GPS, fotos, historial
+   Agenda de cobros por fecha y responsable
    Almacenamiento local del navegador
 ===================================================== */
 
@@ -94,7 +95,9 @@ const modulos = {
       ["producto", "Producto entregado", true],
       ["cantidad", "Cantidad entregada", true],
       ["fecha", "Fecha de entrega", true],
-      ["vendedor", "Trabajador responsable", false],
+      ["fechaCobro", "Fecha programada para cobrar", true],
+      ["responsableCobro", "Trabajador responsable del cobro", false],
+      ["vendedor", "Trabajador que entregó la mercancía", false],
       ["estado", "Estado de la consignación", false],
       ["observacion", "Observaciones", false]
     ]
@@ -279,7 +282,53 @@ estilos.textContent = `
 }
 
 .resumen-item small { color:#817b8d; font-size:11px; }
-.resumen-item strong { display:block; font-size:23px; margin-top:8px; }
+
+.agenda-cobros { margin:18px 0; }
+
+.agenda-grupos {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+}
+
+.agenda-grupo {
+  border:1px solid #ece9f1;
+  border-radius:12px;
+  padding:14px;
+  background:#fff;
+  min-width:0;
+}
+
+.agenda-grupo h3 {
+  font-size:14px;
+  margin:0 0 10px;
+}
+
+.agenda-item {
+  border-top:1px solid #f0edf4;
+  padding:10px 0;
+  font-size:12px;
+  overflow-wrap:anywhere;
+}
+
+.agenda-item p {
+  margin:4px 0;
+  color:#817b8d;
+}
+
+.agenda-vacio {
+  color:#817b8d;
+  font-size:12px;
+  padding:8px 0;
+}
+
+.agenda-alerta { color:#b43d4b; }
+
+.resumen-item strong {
+  display:block;
+  font-size:23px;
+  margin-top:8px;
+}
 
 .tarjeta-expediente {
   background:white;
@@ -318,9 +367,7 @@ estilos.textContent = `
   margin-bottom:4px;
 }
 
-.exp-seccion {
-  margin-top:22px;
-}
+.exp-seccion { margin-top:22px; }
 
 .exp-seccion h3 {
   font-size:16px;
@@ -348,6 +395,7 @@ estilos.textContent = `
 @media(max-width:800px) {
   .modulo-layout { grid-template-columns:1fr; }
   .resumen-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .agenda-grupos { grid-template-columns:1fr; }
 }
 `;
 
@@ -476,7 +524,7 @@ function obtenerTipoRelacion(modulo, campo) {
     return "productos";
   }
 
-  if (["vendedor", "cobrador", "responsable", "trabajador"].includes(campo)) {
+  if (["vendedor", "cobrador", "responsable", "trabajador", "responsableCobro"].includes(campo)) {
     return "personal";
   }
 
@@ -546,7 +594,7 @@ function crearCampo(campo, modulo, registroActual = null) {
     `;
   }
 
-  if (nombre === "fecha") {
+  if (nombre === "fecha" || nombre === "fechaCobro") {
     return `
       <label>
         ${escapar(etiqueta)}
@@ -618,6 +666,95 @@ document.getElementById("menuBtn")?.addEventListener("click", () => {
   sidebar?.classList.toggle("open");
 });
 
+/* AGENDA DE COBROS */
+
+function obtenerAgendaCobros() {
+  const hoy = fechaActual();
+  const clientes = obtenerRegistros("clientes");
+
+  return obtenerRegistros("consignaciones")
+    .filter(item =>
+      item.fechaCobro &&
+      !["cobrado", "pagado", "cerrado", "completado"]
+        .includes(String(item.estado || "").toLowerCase())
+    )
+    .map(item => {
+      const cliente = clientes.find(c =>
+        (item.clienteId && c.id === item.clienteId) ||
+        c.nombre === item.cliente
+      );
+
+      const fecha = String(item.fechaCobro).slice(0, 10);
+
+      return {
+        ...item,
+        clienteNombre: cliente?.nombre || item.cliente || "Cliente",
+        grupo: fecha < hoy
+          ? "atrasados"
+          : fecha === hoy
+            ? "hoy"
+            : "proximos"
+      };
+    })
+    .sort((a, b) =>
+      String(a.fechaCobro).localeCompare(String(b.fechaCobro))
+    );
+}
+
+function mostrarAgendaCobros() {
+  const agenda = obtenerAgendaCobros();
+
+  const grupos = [
+    ["atrasados", "Cobros atrasados"],
+    ["hoy", "Cobros para hoy"],
+    ["proximos", "Próximos cobros"]
+  ];
+
+  let html = `
+    <section class="modulo-card agenda-cobros">
+      <h3>Agenda de cobros</h3>
+      <p>Fechas programadas para visitar y gestionar cada consignación.</p>
+      <div class="agenda-grupos">
+  `;
+
+  grupos.forEach(grupo => {
+    const clave = grupo[0];
+    const titulo = grupo[1];
+    const items = agenda.filter(item => item.grupo === clave);
+
+    html += `
+      <div class="agenda-grupo">
+        <h3 class="${clave === "atrasados" && items.length ? "agenda-alerta" : ""}">
+          ${titulo} (${items.length})
+        </h3>
+    `;
+
+    if (!items.length) {
+      html += `
+        <div class="agenda-vacio">
+          No hay cobros en esta categoría.
+        </div>
+      `;
+    }
+
+    items.forEach(item => {
+      html += `
+        <div class="agenda-item">
+          <strong>${escapar(item.clienteNombre)}</strong>
+          <p>${escapar(item.producto || "Mercancía")} · Cantidad: ${escapar(item.cantidad || "No indicada")}</p>
+          <p>Fecha: ${fechaBonita(item.fechaCobro)}</p>
+          <p>Responsable: ${escapar(item.responsableCobro || "Sin asignar")}</p>
+          <p>Entrega: ${fechaBonita(item.fecha)}</p>
+        </div>
+      `;
+    });
+
+    html += `</div>`;
+  });
+
+  return html + `</div></section>`;
+}
+
 /* INICIO */
 
 function mostrarInicio() {
@@ -659,6 +796,8 @@ function mostrarInicio() {
       `).join("")}
     </div>
 
+    ${mostrarAgendaCobros()}
+
     <section class="modulo-card">
       <h3>Administración del negocio</h3>
       <p>Los datos se guardan en el almacenamiento de este navegador.</p>
@@ -668,7 +807,9 @@ function mostrarInicio() {
 
   content.querySelectorAll("[data-ir]").forEach(tarjeta => {
     const ir = () => abrirModulo(tarjeta.dataset.ir);
+
     tarjeta.addEventListener("click", ir);
+
     tarjeta.addEventListener("keydown", evento => {
       if (evento.key === "Enter" || evento.key === " ") ir();
     });
@@ -756,7 +897,8 @@ function mostrarModulo(modulo, idEditar = null) {
   document.getElementById("buscarRegistro")
     .addEventListener("input", renderizarRegistros);
 
-  document.getElementById("obtenerGPS")?.addEventListener("click", obtenerGPS);
+  document.getElementById("obtenerGPS")
+    ?.addEventListener("click", obtenerGPS);
 
   renderizarRegistros();
 }
@@ -882,6 +1024,17 @@ async function guardarRegistro(evento) {
     registro.fechaRegistro = fechaActual();
   }
 
+  if (moduloActual === "consignaciones") {
+    const clienteRelacionado = obtenerRegistros("clientes")
+      .find(item => item.nombre === registro.cliente);
+
+    registro.clienteId = clienteRelacionado?.id || anterior?.clienteId || "";
+
+    if (!registro.estado) {
+      registro.estado = "Pendiente";
+    }
+  }
+
   if (moduloActual === "clientes" && anterior && !registro.numeroCliente) {
     registro.numeroCliente = siguienteNumeroCliente();
   }
@@ -894,6 +1047,7 @@ async function guardarRegistro(evento) {
   if (anterior) {
     const indice = registros.findIndex(item => item.id === id);
     if (indice === -1) return;
+
     registros[indice] = registro;
 
     registrarAccion(
@@ -931,6 +1085,9 @@ function limpiarFormulario() {
 
   const fecha = formulario.elements.fecha;
   if (fecha) fecha.value = fechaActual();
+
+  const fechaCobro = formulario.elements.fechaCobro;
+  if (fechaCobro) fechaCobro.value = fechaActual();
 
   const titulo = document.getElementById("tituloFormulario");
   if (titulo) titulo.textContent = "Nuevo registro";
@@ -1031,11 +1188,23 @@ function mostrarExpedienteCliente(id) {
 
   if (pageTitle) pageTitle.textContent = "Expediente del cliente";
 
-  const ventas = obtenerRegistros("ventas").filter(item => item.cliente === cliente.nombre);
-  const consignaciones = obtenerRegistros("consignaciones").filter(item => item.cliente === cliente.nombre);
-  const cobros = obtenerRegistros("cobros").filter(item => item.cliente === cliente.nombre);
-  const regalos = obtenerRegistros("regalos").filter(item => item.cliente === cliente.nombre);
-  const visitas = obtenerRegistros("visitas").filter(item => item.cliente === cliente.nombre);
+  const ventas = obtenerRegistros("ventas")
+    .filter(item => item.cliente === cliente.nombre);
+
+  const consignaciones = obtenerRegistros("consignaciones")
+    .filter(item =>
+      (item.clienteId && item.clienteId === cliente.id) ||
+      item.cliente === cliente.nombre
+    );
+
+  const cobros = obtenerRegistros("cobros")
+    .filter(item => item.cliente === cliente.nombre);
+
+  const regalos = obtenerRegistros("regalos")
+    .filter(item => item.cliente === cliente.nombre);
+
+  const visitas = obtenerRegistros("visitas")
+    .filter(item => item.cliente === cliente.nombre);
 
   const lat = cliente.latitud;
   const lon = cliente.longitud;
@@ -1111,7 +1280,7 @@ function mostrarExpedienteCliente(id) {
     </section>
 
     ${listaHistorial("Ventas", ventas, ["fecha", "producto", "cantidad", "total", "vendedor", "observacion"])}
-    ${listaHistorial("Consignaciones", consignaciones, ["fecha", "producto", "cantidad", "vendedor", "estado", "observacion"])}
+    ${listaHistorial("Consignaciones", consignaciones, ["fecha", "producto", "cantidad", "fechaCobro", "responsableCobro", "vendedor", "estado", "observacion"])}
     ${listaHistorial("Pagos recibidos", cobros, ["fecha", "monto", "metodo", "referencia", "cobrador", "observacion"])}
     ${listaHistorial("Regalos entregados", regalos, ["fecha", "regalo", "trabajador", "motivo", "observacion"])}
     ${listaHistorial("Visitas realizadas", visitas, ["fecha", "trabajador", "motivo", "resultado", "observacion"])}
